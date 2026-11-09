@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>PUCHIPI CLUB — Galería Semanal</title>
+  <meta name="description" content="6 amigos. 1 ruleta cada lunes. 5 fotos para contar el día. Almacenamiento vía Discord Webhook." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Textura sutil de grano analógico -->
+  <div class="film-grain" aria-hidden="true"></div>
+
+  <!-- =========================================================
+       PANTALLA DE ACCESO CON CÓDIGO PIN DE 4 DÍGITOS (100% MÓVIL)
+       ========================================================= -->
+  <section id="login-screen" class="login-screen" aria-label="Iniciar sesión con código de 4 dígitos">
+    <div class="login-ambient-glow"></div>
+
+    <div class="login-container">
+      <div class="login-brand">
+        <h1 class="brand-title">PUCHIPI <em>//</em> CLUB</h1>
+        <p class="brand-subtitle">
+          Ingresa tu código de 4 dígitos para entrar a la galería.
+        </p>
+
+        <!-- Banner destacado en pantalla de inicio que avisa a quién le toca subir fotos -->
+        <div id="login-turn-banner" class="login-turn-banner">
+          <div class="login-turn-avatar" id="login-turn-avatar">C</div>
+          <div class="login-turn-text">
+            <span class="mono-label">TURNO DE ESTA SEMANA</span>
+            <strong id="login-turn-name">Le toca a Camila</strong>
+          </div>
+          <span class="turn-tag-pill" id="login-turn-count">0/5</span>
+        </div>
+      </div>
+
+      <div class="pin-card">
+        <div class="pin-card-header">
+          <span class="mono-label">CÓDIGO PIN</span>
+          <span id="pin-status-text" class="pin-status-text">4 dígitos</span>
+        </div>
+
+        <div id="pin-dots" class="pin-dots" role="status" aria-live="polite">
+          <div class="pin-dot" data-index="0"><span></span></div>
+          <div class="pin-dot" data-index="1"><span></span></div>
+          <div class="pin-dot" data-index="2"><span></span></div>
+          <div class="pin-dot" data-index="3"><span></span></div>
+        </div>
+
+        <div class="pin-keypad" role="group" aria-label="Teclado numérico">
+          <button type="button" class="key-btn" data-key="1">1</button>
+          <button type="button" class="key-btn" data-key="2">2</button>
+          <button type="button" class="key-btn" data-key="3">3</button>
+          <button type="button" class="key-btn" data-key="4">4</button>
+          <button type="button" class="key-btn" data-key="5">5</button>
+          <button type="button" class="key-btn" data-key="6">6</button>
+          <button type="button" class="key-btn" data-key="7">7</button>
+          <button type="button" class="key-btn" data-key="8">8</button>
+          <button type="button" class="key-btn" data-key="9">9</button>
+          <button type="button" class="key-btn key-action" data-action="clear" title="Limpiar">ESC</button>
+          <button type="button" class="key-btn" data-key="0">0</button>
+          <button type="button" class="key-btn key-action" data-action="backspace" title="Borrar">⌫</button>
+        </div>
+
+        <!-- Acceso rápido de demostración para probar los 6 perfiles -->
+        <div class="demo-login-helper">
+          <div class="demo-helper-header">
+            <span class="mono-label">TOCA UN AMIGO PARA ENTRAR RÁPIDO</span>
+            <span class="demo-pill">PINs</span>
+          </div>
+          <div id="demo-friend-pills" class="demo-friend-pills"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       APLICACIÓN PRINCIPAL: SOLO LA GALERÍA + BOTÓN DE 3 RAYAS
+       ========================================================= -->
+  <div id="app-shell" class="app-shell hidden">
+    <header class="minimal-topbar">
+      <div class="minimal-topbar-inner">
+        <button
+          type="button"
+          id="btn-open-sidebar"
+          class="hamburger-btn"
+          aria-label="Abrir menú"
+          aria-expanded="false"
+        >
+          <span class="hamburger-lines">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+
+        <button type="button" id="btn-reset-gallery" class="minimal-brand-center">
+          <span class="minimal-brand-title">PUCHIPI <em>//</em> CLUB</span>
+          <span id="topbar-active-filter" class="minimal-brand-sub">Semana 45</span>
+        </button>
+
+        <div class="minimal-topbar-right">
+          <button
+            type="button"
+            id="btn-topbar-upload"
+            class="topbar-upload-pill hidden"
+            title="Tomar / Subir foto del turno"
+          >
+            <span>＋</span>
+            <span id="topbar-upload-count" class="topbar-upload-text">Subir</span>
+          </button>
+
+          <button
+            type="button"
+            id="btn-avatar-logout"
+            class="topbar-avatar-btn"
+            title="Cambiar usuario (Salir a pantalla PIN)"
+          >
+            <span id="active-user-avatar" class="user-avatar-mini">J</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- =========================================================
+         SIDEBAR DESLIZABLE (3 RAYAS: SOLO TURNO, SEMANAS Y AUTORES)
+         ========================================================= -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop hidden" aria-hidden="true"></div>
+
+    <aside id="sidebar-drawer" class="sidebar-drawer" aria-label="Menú de semanas y autores">
+      <div class="sidebar-header">
+        <div class="sidebar-user-card">
+          <span id="sidebar-user-avatar" class="user-avatar-md">J</span>
+          <div class="sidebar-user-meta">
+            <div class="sidebar-user-name-row">
+              <strong id="sidebar-user-name">JuanUke</strong>
+              <span id="sidebar-user-handle" class="mono-muted">@juanuke</span>
+            </div>
+            <span id="sidebar-user-role" class="sidebar-turn-badge">★ Tu turno esta semana</span>
+          </div>
+        </div>
+        <button type="button" id="btn-close-sidebar" class="sidebar-close-btn" aria-label="Cerrar menú">✕</button>
+      </div>
+
+      <div class="sidebar-scroll-body">
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <span class="mono-label">TURNO DE LA SEMANA</span>
+            <span id="sidebar-slots-counter" class="mono-tag">0 / 5 FOTOS</span>
+          </div>
+
+          <div class="sidebar-turn-box">
+            <div class="sidebar-turn-top">
+              <div>
+                <div id="sidebar-turn-title" class="sidebar-turn-title">Semana 45 · JuanUke</div>
+                <div id="sidebar-turn-sub" class="mono-muted">Lunes a Domingo</div>
+              </div>
+              <button type="button" id="btn-sidebar-roulette" class="btn-roulette-mini" title="Abrir Ruleta del Lunes">
+                🎡 Ruleta
+              </button>
+            </div>
+
+            <div id="sidebar-slots-strip" class="sidebar-slots-strip"></div>
+
+            <button type="button" id="btn-sidebar-upload" class="btn-primary-upload">
+              ＋ Tomar / Subir foto
+            </button>
+
+            <div id="sidebar-lock-box" class="sidebar-lock-box hidden">
+              <span id="sidebar-lock-text">🔒 Solo quien tenga el turno puede subir hoy.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <span class="mono-label">SEMANAS</span>
+          </div>
+          <div id="sidebar-weeks-list" class="sidebar-list"></div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <span class="mono-label">VER POR AUTOR</span>
+          </div>
+          <div id="sidebar-authors-list" class="sidebar-list"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- =========================================================
+         CONTENIDO PRINCIPAL: GALERÍA + 3 MODOS DE VISTA
+         ========================================================= -->
+    <main class="gallery-main">
+      <div class="gallery-view-bar">
+        <div id="active-filter-banner" class="active-filter-inline">
+          <span id="gallery-filter-label" class="mono-label">ARCHIVO COMPLETO</span>
+        </div>
+
+        <div class="gallery-view-switcher" role="group" aria-label="Modo de vista de la galería">
+          <button type="button" class="gallery-view-pill active" data-view="retro" title="Carrete por semana">
+            <span>▤</span>
+            <span>Semanas</span>
+          </button>
+          <button type="button" class="gallery-view-pill" data-view="masonry" title="Mosaico">
+            <span>⊞</span>
+            <span>Mosaico</span>
+          </button>
+          <button type="button" class="gallery-view-pill" data-view="polaroid" title="Polaroid">
+            <span>▣</span>
+            <span>Polaroid</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="photos-stage" class="photos-stage"></div>
+    </main>
+
+    <button
+      type="button"
+      id="btn-fab-upload"
+      class="fab-upload-btn hidden"
+      aria-label="Tomar foto"
+      title="Tomar foto para el carrete"
+    >
+      <span>＋</span>
+    </button>
+  </div>
+
+  <!-- =========================================================
+       MODAL 1: VISOR DE FOTO (DISEÑO EXACTO DEL BOCETO)
+       [ FOTO VERTICAL GRANDE ]
+       [ 💬 (Izq)     ♡ (Centro)     XX/XX (Der) ]
+       ========================================================= -->
+  <div id="photo-modal" class="modal-backdrop photo-viewer-backdrop hidden" role="dialog" aria-modal="true" aria-label="Fotografía">
+    <div class="sketch-photo-frame" id="sketch-photo-frame">
+      <button type="button" id="btn-close-photo-modal" class="sketch-close-btn" aria-label="Cerrar">✕</button>
+
+      <div class="sketch-photo-box" id="sketch-photo-box">
+        <button type="button" id="btn-modal-prev" class="sketch-nav-zone prev" aria-label="Anterior"></button>
+        <img id="modal-bg-wide" class="viewer-media-fit viewfinder-bg-wide hidden" src="" alt="" aria-hidden="true" />
+        <img id="modal-photo-img" class="viewer-media-fit" src="" alt="" />
+        <div id="modal-fx-layer" class="creative-fx-layer">
+          <span id="modal-led-stamp" class="retro-led-stamp hidden"></span>
+          <span id="modal-film-code" class="retro-film-code"></span>
+        </div>
+        <button type="button" id="btn-modal-next" class="sketch-nav-zone next" aria-label="Siguiente"></button>
+
+        <div class="sketch-photo-top-meta">
+          <span id="modal-author-avatar" class="user-avatar-xs">J</span>
+          <span id="modal-author-name" class="sketch-author-name">JuanUke</span>
+        </div>
+
+        <div id="sketch-comments-drawer" class="sketch-comments-drawer hidden">
+          <div class="sketch-comments-drawer-header">
+            <div>
+              <strong id="drawer-caption-author">JuanUke:</strong>
+              <span id="modal-photo-caption" class="drawer-caption-text"></span>
+            </div>
+            <button type="button" id="btn-close-comments-drawer" class="drawer-close-btn">✕</button>
+          </div>
+
+          <div id="modal-comments-list" class="sketch-comments-list"></div>
+
+          <form id="form-add-comment" class="sketch-comment-form">
+            <input
+              type="text"
+              id="input-comment-text"
+              placeholder="Escribe un comentario..."
+              maxlength="240"
+              required
+            />
+            <button type="submit" class="btn-send-comment">Enviar</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="sketch-bottom-bar">
+        <button type="button" id="btn-toggle-comments" class="sketch-icon-btn" aria-label="Ver comentarios">
+          <svg class="sketch-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+          </svg>
+          <span id="modal-comments-count" class="sketch-count">2</span>
+        </button>
+
+        <button type="button" id="btn-toggle-like" class="sketch-icon-btn heart-btn" aria-label="Me gusta">
+          <svg id="modal-heart-svg" class="sketch-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+          <span id="modal-likes-count" class="sketch-count">4</span>
+        </button>
+
+        <button type="button" id="btn-toggle-date-format" class="sketch-date-code" title="Toca para alternar Fecha / Número de foto">
+          <span id="modal-xx-label">08/11</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL 2: SUBIR / TOMAR FOTO
+       [ VISOR VERTICAL CON POLAROID ]
+       [ ZOOM: 0.5x · 1x · 2x + SLIDER / PELLIZCO ]
+       [ BOTÓN BLANCO DE TOMAR FOTO ]
+       ========================================================= -->
+  <div id="upload-modal" class="modal-backdrop photo-viewer-backdrop hidden" role="dialog" aria-modal="true" aria-label="Cámara de turno">
+    <div class="sketch-photo-frame camera-frame-mode">
+      <button type="button" id="btn-close-upload-modal" class="sketch-close-btn" aria-label="Cerrar">✕</button>
+
+      <!-- Visor vertical de la FOTO / CÁMARA -->
+      <div class="sketch-photo-box camera-viewfinder" id="camera-viewfinder">
+        <div id="camera-flash-overlay" class="camera-flash-overlay"></div>
+
+        <!-- Fondo ambiente para cuando se usa lente 0.5x en fotos -->
+        <img id="viewfinder-bg-wide" class="viewer-media-fit viewfinder-bg-wide hidden" src="" alt="" aria-hidden="true" />
+
+        <!-- Video en vivo de la cámara -->
+        <video id="camera-live-video" class="viewer-media-fit hidden" autoplay playsinline muted></video>
+
+        <!-- Imagen visible en el visor -->
+        <img id="upload-preview-img" class="viewer-media-fit" src="" alt="Visor" />
+
+        <!-- Capa de efecto Polaroid en vivo (Marco blanco crema + Fecha LED + Texto instantáneo) -->
+        <div id="viewfinder-filter-overlay" class="creative-fx-layer fx-polaroid">
+          <span id="viewfinder-date-stamp" class="retro-led-stamp">'26 11 08</span>
+          <span id="viewfinder-film-code" class="retro-film-code">POLAROID 600 · INSTANT</span>
+        </div>
+
+        <!-- Píldoras superiores discretas -->
+        <div class="camera-top-bar">
+          <span id="upload-modal-slot-label" class="camera-slot-pill">04 / 05</span>
+          <div class="camera-top-Tools">
+            <!-- Input para abrir la cámara nativa del celular directamente (lentes reales 0.5x, 1x, 2x) -->
+            <input type="file" id="input-native-camera" accept="image/*" capture="environment" class="sr-only" />
+            <!-- Input para elegir foto desde la galería o carrete del celular -->
+            <input type="file" id="input-photo-file" accept="image/*" class="sr-only" />
+            <button type="button" id="btn-pick-file" class="camera-tool-pill" title="Subir desde galería">
+              🖼️ Galería
+            </button>
+            <button type="button" id="btn-open-native-camera" class="camera-tool-pill highlight" title="Abrir cámara nativa del iPhone con lentes 0.5x, 1x, 2x reales">
+              📸 Lente Real (iPhone)
+            </button>
+            <button type="button" id="btn-toggle-webcam" class="camera-tool-pill" title="Activar/Voltear cámara en vivo">
+              📹 En Vivo
+            </button>
+          </div>
+        </div>
+
+        <!-- Gaveta que aparece CUANDO TOMA LA FOTO para ponerle una descripción y publicar -->
+        <div id="capture-caption-drawer" class="sketch-comments-drawer capture-drawer hidden">
+          <div class="sketch-comments-drawer-header">
+            <div>
+              <strong>¡Foto lista! ✨</strong>
+              <span class="drawer-caption-text">Añade una descripción para subirla al carrete</span>
+            </div>
+            <button type="button" id="btn-retake-photo" class="btn-retake-pill">↺ Repetir</button>
+          </div>
+
+          <form id="form-upload-photo" class="capture-description-form">
+            <input
+              type="text"
+              id="input-photo-caption"
+              class="capture-desc-input"
+              placeholder="Escribe una descripción..."
+              maxlength="220"
+              required
+            />
+            <button type="submit" id="btn-submit-upload" class="btn-publish-capture">
+              Subir foto
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Controles inferiores: Selector de Lente / Zoom (0.5x, 1x, 2x + Slider) + Botón Blanco -->
+      <div class="camera-bottom-controls">
+        <div class="camera-zoom-bar" role="group" aria-label="Control de Zoom y Gran Angular 0.5x">
+          <div class="zoom-Quick-pills">
+            <button type="button" class="zoom-pill" data-zoom="0.5" title="Ultra Gran Angular 0.5x">0.5x</button>
+            <button type="button" class="zoom-pill active" data-zoom="1" title="Lente Normal 1x">1x</button>
+            <button type="button" class="zoom-pill" data-zoom="2" title="Zoom 2x">2x</button>
+          </div>
+
+          <div class="zoom-slider-wrap">
+            <input
+              type="range"
+              id="camera-zoom-slider"
+              class="camera-zoom-slider"
+              min="0.5"
+              max="3"
+              step="0.05"
+              value="1"
+              aria-label="Nivel de zoom"
+            />
+            <span id="camera-zoom-readout" class="camera-zoom-readout">1.0x</span>
+          </div>
+        </div>
+
+        <!-- Fila del Botón Blanco de Obturador (Tomar Foto) -->
+        <div class="shutter-row">
+          <div style="width:50px"></div>
+
+          <!-- Botón blanco de tomar foto -->
+          <button type="button" id="btn-shutter-capture" class="white-shutter-btn" aria-label="Tomar foto">
+            <span class="white-shutter-inner"></span>
+          </button>
+
+          <button type="button" id="btn-toggle-polaroid" class="polaroid-badge-btn active" title="Activar/Desactivar marco Polaroid">
+            <span class="filter-orb orb-polaroid"></span>
+            <span id="camera-active-filter-tag">POLAROID</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL 3: RULETA DEL LUNES
+       ========================================================= -->
+  <div id="roulette-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Ruleta del Lunes">
+    <div class="standard-modal-card modal-lg">
+      <div class="standard-modal-header">
+        <div>
+          <span class="mono-label">SORTEO SEMANAL · CADA LUNES</span>
+          <h3 class="modal-title">La Ruleta de los 6</h3>
+        </div>
+        <button type="button" id="btn-close-roulette-modal" class="modal-close-inline" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="roulette-modal-body">
+        <div class="roulette-wheel-column">
+          <div class="roulette-wheel-frame">
+            <div class="wheel-pointer" aria-hidden="true">▼</div>
+            <canvas id="roulette-canvas" width="400" height="400"></canvas>
+            <button type="button" id="btn-spin-center" class="wheel-center-cap">
+              <span class="wheel-cap-label">GIRAR</span>
+              <span class="wheel-cap-sub">LUNES</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="roulette-info-column">
+          <div class="roulette-current-card">
+            <span class="mono-label">ELEGIDO DE LA SEMANA ACTUAL</span>
+            <div id="roulette-winner-card" class="roulette-winner-card"></div>
+          </div>
+
+          <div class="roulette-controls-box">
+            <button type="button" id="btn-spin-roulette" class="btn-spin-primary">
+              🎡 Girar Ruleta Ahora
+            </button>
+            <button type="button" id="btn-new-week-roulette" class="btn-secondary-outline">
+              📅 Nueva Semana + Girar
+            </button>
+          </div>
+
+          <div class="roulette-history-box">
+            <span class="mono-label">HISTORIAL DE TURNOS</span>
+            <div id="roulette-history-list" class="roulette-history-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast de notificaciones -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
